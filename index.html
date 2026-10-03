@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Solucionador de ecuaciones diferenciales</title>
+<title>Solucionador de ecuaciones diferenciales - APLICACIONES DEL MÉTODO GRÁFICO</title>
 <style>
 :root{
   --bg:#12141c; --bg2:#1b1e2a; --grid:#242838; --fg:#e9ebf1; --muted:#9aa1b4;
@@ -72,18 +72,32 @@ canvas{width:100%; height:auto; display:block; border:1px solid var(--line); bor
 table{width:100%; border-collapse:collapse; font-size:.82rem; margin-top:4px;}
 th,td{text-align:left; padding:5px 8px; border-bottom:1px solid var(--line);}
 th{color:var(--muted); font-weight:600;}
+#exList .chip{font-size:.72rem;}
+.chip.on{border-color:var(--accent);color:var(--fg);}
+.ans p{margin:6px 0; font-size:.86rem;}
+.ans table{margin:6px 0;}
 footer{color:var(--muted); font-size:.74rem; margin-top:22px;}
 </style>
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="uniminuto.png">
+<link rel="icon" type="image/png" sizes="16x16" href="uniminuto.png">
+<link rel="manifest" href="/site.webmanifest">
 </head>
 <body>
 <div class="wrap">
-  <h1>Solucionador de ecuaciones diferenciales</h1>
-  <p class="sub">dy/dx = f(x, y) — antiderivada simbólica cuando es posible, solución numérica por Runge-Kutta 4, campo de pendientes y familia de soluciones.</p>
+  <h1>Solucionador de ecuaciones diferenciales - APLICACIONES DEL MÉTODO GRÁFICO</h1>
+  <p class="sub">dy/dx = f(x, y) — antiderivada simbólica cuando es posible, solución numérica por Runge-Kutta 4, campo de pendientes, familia de soluciones y los ejercicios del Taller 2.</p>
   <div class="ruler"></div>
-  <img class="intro-image" src="ecuacion_dy_dx.png" alt="Descripción de la imagen">
+  <h3>Ecuación Escogida en Clase:</h3>
+  <img class="intro-image" src="ecuacion_dy_dx.png" alt="Descripción de la imagen" onerror="this.style.display='none'">
 
   <div class="layout">
     <div>
+      <fieldset>
+        <legend>ejercicios del taller</legend>
+        <div class="examples" id="exList"></div>
+      </fieldset>
+
       <fieldset>
         <legend>ecuación</legend>
         <label for="eq">dy/dx =</label>
@@ -142,6 +156,11 @@ footer{color:var(--muted); font-size:.74rem; margin-top:22px;}
         </div>
       </div>
 
+      <div class="panel ans" id="ansBlock" style="display:none">
+        <h2 id="ansTitle">respuesta del ejercicio</h2>
+        <div id="ansBody"></div>
+      </div>
+
       <div class="panel">
         <h2>tabla de valores (curva principal)</h2>
         <table>
@@ -152,14 +171,17 @@ footer{color:var(--muted); font-size:.74rem; margin-top:22px;}
     </div>
   </div>
   <footer>Cuando la ecuación no es un polinomio simple en x (incluye y, funciones trigonométricas, exponenciales, etc.) la solución se calcula únicamente por método numérico (Runge-Kutta de orden 4).</footer>
+  <h5>Proyecto realizado por: David Santiago Ruiz Ruiz (ID: 1001116) Juan Esteban Martínez Hernández (ID: 1052246) y <br> Juan Pablo Guzmán Martínez (ID: 1036822)</h5>
+  <h5>Desarrollado para la materia de Ecuaciones Diferenciales, Universidad Minuto de Dios, NRC-60-90049.<br> Docente: Luis Fernando Huertas Ramirez</h5>
 </div>
 
 <script>
-function setEq(v){ document.getElementById('eq').value=v; solve(); }
+let EX=null;
+function setEq(v){ EX=null; document.getElementById('eq').value=v; solve(); }
 function fmtNum(n){ if(Math.abs(n)<1e-9) return '0'; return Number.isInteger(n)?n.toString():n.toFixed(2).replace(/0+$/,'').replace(/\.$/,''); }
 
 function makeF(expr){
-  const body='with(Math){return ('+expr.replace(/\s+/g,'').replace(/\^/g,'**')+');}';
+  const body='with(Math){return ('+expr.replace(/\s+/g,'').replace(/\bln\(/g,'log(').replace(/\bsen\(/g,'sin(').replace(/\^/g,'**')+');}';
   return new Function('x','y', body);
 }
 
@@ -311,16 +333,18 @@ function solve(){
   }
 
   const N=240;
-  const mainPts=computeCurve(f,x0,y0,xmin,xmax,N);
-  const nCurves=5, familyPts=[];
+  let mainPts=computeCurve(f,x0,y0,xmin,xmax,N);
+  const nCurves=5; let familyPts=[];
   for(let i=0;i<nCurves;i++){
     const yy=nCurves===1?yFrom:yFrom+(yTo-yFrom)*i/(nCurves-1);
     familyPts.push(computeCurve(f,x0,yy,xmin,xmax,N));
   }
 
-  let ys=[]; [mainPts,...familyPts].forEach(a=>a.forEach(p=>{ if(isFinite(p.y)) ys.push(p.y); }));
+  if(EX&&EX.points){ familyPts=EX.points.map(([a,b])=>computeCurve(f,a,b,xmin,xmax,N)); mainPts=familyPts[0]; }
+  let ys=[]; [mainPts,...familyPts].forEach(a=>a.forEach(p=>{ if(isFinite(p.y)&&Math.abs(p.y)<1e3) ys.push(p.y); }));
   let ymin=-4, ymax=4;
   if(ys.length){ ymin=Math.min(...ys); ymax=Math.max(...ys); const pad=(ymax-ymin)*0.12||1; ymin-=pad; ymax+=pad; }
+  if(EX&&EX.ylim){ ymin=EX.ylim[0]; ymax=EX.ylim[1]; }
 
   draw(f,mainPts,familyPts,xmin,xmax,ymin,ymax);
 
@@ -331,6 +355,8 @@ function solve(){
     const C=y0-sym.evalInteg(x0);
     const Cs=Math.abs(C)<1e-9?'':(C<0?' - '+Math.abs(C).toFixed(3).replace(/0+$/,'').replace(/\.$/,''):' + '+C.toFixed(3).replace(/0+$/,'').replace(/\.$/,''));
     parEl.textContent='y = '+sym.formula.replace(/\s*\+\s*C$/,'')+Cs+'   (y('+fmtNum(x0)+') = '+fmtNum(y0)+')';
+  } else if(EX){
+    symEl.textContent='Ver la respuesta del ejercicio más abajo.'; parEl.textContent='—';
   } else {
     symEl.textContent='No es un polinomio simple en x — se resuelve solo numéricamente (ver gráfico y tabla).';
     parEl.textContent='—';
@@ -346,7 +372,59 @@ function solve(){
     tr.innerHTML='<td>'+fmtNum(xx)+'</td><td>'+(isFinite(nearest.y)?nearest.y.toFixed(4):'—')+'</td>';
     tbody.appendChild(tr);
   }
+  renderAns(mainPts,familyPts);
 }
+
+const P3=[[-2,2.5],[-2,1.5],[-2,-0.5],[-2,-1.5],[-2,-2.5],[2,2.5],[2,1.5],[2,0.5],[2,-1.5],[2,-2.5]];
+const f2=v=>isFinite(v)?v.toFixed(2):'—';
+function cross(pts,lv){
+  for(let i=1;i<pts.length;i++){ const a=pts[i-1],b=pts[i];
+    if(isFinite(a.y)&&isFinite(b.y)&&a.y!==b.y&&(a.y-lv)*(b.y-lv)<=0) return a.x+(lv-a.y)*(b.x-a.x)/(b.y-a.y); }
+  return NaN;
+}
+const EXS=[
+ {n:'2.1  2x²y²',eq:'2*x^2*y^2',x0:1,y0:-1,xmin:0,xmax:4,yFrom:-1,yTo:0,ylim:[-3.3,0.3],
+  sol:'Separando variables: ∫dy/y² = ∫2x² dx ⇒ −1/y = 2x³/3 + C. Con y(1)=−1: C=1/3 ⇒ <b>y = −3/(2x³+1)</b>.',
+  lp:'dy/dx ≥ 0, así que y crece y tiende a 0⁻ (y ≈ −3/(2x³)) sin cruzar el equilibrio y=0. Las curvas con y₀>0 explotan en un x finito.'},
+ {n:'2.2  x ln y',eq:'x*ln(y)',x0:1,y0:1,xmin:0,xmax:2,yFrom:0.5,yTo:1.5,ylim:[-0.1,2.7],
+  sol:'y = 1 es solución constante (ln 1 = 0) y, por existencia y unicidad, la única del PVI: <b>y(x) = 1</b>.',
+  lp:'Es inestable para x>0: si y₀>1 la curva se aleja hacia arriba; si y₀<1 cae hasta y=0 en un x finito.'},
+ {n:'2.3  √(x−y)',eq:'sqrt(x-y)',x0:2,y0:1,xmin:1,xmax:6,yFrom:0,yTo:1.5,ylim:[-2,5.8],
+  sol:'Con u=x−y: u′ = 1−√u, y u(2)=1 es equilibrio ⇒ u≡1 ⇒ <b>y = x − 1</b>.',
+  lp:'y crece con pendiente 1 (y→∞). La recta y=x−1 atrae a las demás curvas con x−y>0.'},
+ {n:'2.4  x²−y²',eq:'x^2-y^2',x0:0,y0:1,xmin:-0.9,xmax:4,yFrom:0,yTo:1,ylim:[-1,8],
+  sol:'Ecuación de Riccati: no tiene solución elemental, se resuelve numéricamente (RK4). Mínimo ≈ 0.68 en x ≈ 0.68.',
+  lp:'Para x grande y ≈ x − 1/(2x): sigue la recta y=x, y las curvas de la familia se juntan en ella. Hacia la izquierda hay asíntota vertical en x ≈ −1.04.'},
+ {n:'3.1  paracaidista',eq:'32-1.6*y',x0:0,y0:0,xmin:0,xmax:4,yFrom:0,yTo:30,ylim:[-1,32],
+  sol:'x = t (s), y = v (ft/s). Isoclinas: 32−1.6v = c ⇒ rectas horizontales. Solución: <b>v(t) = 20(1 − e^(−1.6t))</b>. Velocidad límite: <b>20 ft/s</b>. La paja sí sirve: alarga la distancia de frenado y reduce la fuerza del impacto.',
+  calc:function(m){ return '<p><b>t al 95 % (19 ft/s):</b> ≈ '+cross(m,19).toFixed(2)+' s (analítico: ln 20 / 1.6 = '+(Math.log(20)/1.6).toFixed(2)+' s).</p>'; }},
+ {n:'3.2  venados',eq:'0.0225*y-0.0003*y^2',x0:0,y0:25,xmin:0,xmax:200,yFrom:10,yTo:90,ylim:[0,95],
+  sol:'x = t (meses), y = P. Isoclinas: P = constante. dP/dt = 0.0003P(75−P) ⇒ <b>P(t) = 75/(1 + 2e^(−0.0225t))</b>. Población límite: <b>75 venados</b>.',
+  calc:function(m){ return '<p><b>Tiempo para duplicar (P=50):</b> ≈ '+cross(m,50).toFixed(1)+' meses (analítico: ln 4 / 0.0225 = '+(Math.log(4)/0.0225).toFixed(1)+').</p>'; }},
+ {n:'3.3  sen x + sen y',eq:'sin(x)+sin(y)',x0:-2,y0:2.5,xmin:-3,xmax:3,yFrom:0,yTo:0,ylim:[-3,3],points:P3,
+  sol:'Cada punto azul tiene su curva solución única (integración RK4 hacia ambos lados). Valores en los extremos de la ventana:',
+  calc:function(m,fam){ return '<table><thead><tr><th>#</th><th>(x₀, y₀)</th><th>y′</th><th>y(−3)</th><th>y(3)</th></tr></thead><tbody>'+P3.map(function(p,i){var c=fam[i];return '<tr><td>'+(i+1)+'</td><td>('+p[0]+', '+p[1]+')</td><td>'+f2(Math.sin(p[0])+Math.sin(p[1]))+'</td><td>'+f2(c[0].y)+'</td><td>'+f2(c[c.length-1].y)+'</td></tr>';}).join('')+'</tbody></table>'; }}
+];
+function loadEx(i){
+  EX=EXS[i];
+  ['eq','x0','y0','xmin','xmax','yFrom','yTo'].forEach(function(k){ document.getElementById(k).value=EX[k]; });
+  document.querySelectorAll('#exList .chip').forEach(function(c,j){ c.classList.toggle('on',j===i); });
+  solve();
+}
+function renderAns(m,fam){
+  const box=document.getElementById('ansBlock');
+  if(!EX){ box.style.display='none'; return; }
+  document.getElementById('ansTitle').textContent='respuesta — '+EX.n;
+  let h='<p>'+EX.sol+'</p>';
+  if(EX.lp) h+='<p><b>Comportamiento a largo plazo:</b> '+EX.lp+'</p>';
+  if(EX.calc) h+=EX.calc(m,fam);
+  document.getElementById('ansBody').innerHTML=h; box.style.display='block';
+}
+EXS.forEach(function(e,i){
+  const b=document.createElement('button'); b.className='chip'; b.textContent=e.n; b.onclick=function(){ loadEx(i); };
+  document.getElementById('exList').appendChild(b);
+});
+document.getElementById('eq').addEventListener('input',function(){ EX=null; document.getElementById('ansBlock').style.display='none'; document.querySelectorAll('#exList .chip').forEach(function(c){ c.classList.remove('on'); }); });
 
 solve();
 </script>
